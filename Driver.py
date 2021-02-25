@@ -287,21 +287,21 @@ if __name__ == "__main__":
             test_main_portal = input("\nWould you like to test the Main Portal? (Y/N)\n")
             if (test_main_portal == "Y"):
                 main_portal_path = filedialog.askopenfilename()
-                test.set_main_portal_path(main_portal_path)
+                driver.set_main_portal_path(main_portal_path)
 
                 print("Testing Main Portal!")
 
-                test.test_map_main_portal()
+                driver.test_map_main_portal()
 
             test_affiliate_portal = input("\nWould you like to test the Affiliate Portal? (Y/N)\n")
             if (test_affiliate_portal == "Y"):
 
                 affiliate_portal_path = filedialog.askopenfilename()
-                test.set_affiliate_portal_path(affiliate_portal_path)
+                driver.set_affiliate_portal_path(affiliate_portal_path)
 
                 print("Testing Affiliate Portal!")
 
-                test.test_map_affiliate_portal()
+                driver.test_map_affiliate_portal()
 
             if (main_portal_path == None and affiliate_portal_path == None):
                 print("\nIn order to run the tests, either a Main Portal CSV File or a Affiliate Portal CSV File must be inputted. Please try again.\n")
