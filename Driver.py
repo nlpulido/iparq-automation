@@ -5,6 +5,7 @@ import logging
 import re
 import pandas as pd
 import tkinter
+import ezsheets
 from tkinter import filedialog
 from selenium import webdriver
 from webdriver_manager.chrome import ChromeDriverManager
@@ -40,7 +41,7 @@ class Driver():
         # get driver
         browser = self.driver
 
-        print("Please login to your iPARQ account through the browser that has launched. You have 15 seconds to login.")
+        print("Please login to your iPARQ account through the browser that has launched. You have 1 minute to login.")
 
         # Wait Until the URL changes noting a successful login
         WebDriverWait(browser, 60).until(EC.title_contains("iParq"))
