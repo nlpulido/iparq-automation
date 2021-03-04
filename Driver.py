@@ -269,6 +269,26 @@ class Driver():
         # Grab all the permit elements in the table (in rows)
         permit_elements = permit_table.find_elements(By.TAG_NAME, "tr")
 
+        # Build a map of each permit's unique id
+        for permit_element in permit_elements:
+            # Get the unique ID for the current permit
+            permit_class_name = permit_element.get_attribute('class')
+
+            # filter out only the active permits (non-deleted)
+            if (('rollover' in permit_class_name) and ('st_deleted' not in permit_class_name)):
+                print(permit_class_name)
+
+            #     name_col = permit_element.find_elements(By.TAG_NAME, "td")[0]
+            #     name_span = name_col.find_elements(By.TAG_NAME, "span")[3]
+            #     name_input = name_span.find_element(By.NAME, "name")
+            #     permit_name = name_input.get_attribute('value')
+
+            #     # find the unique permit ID 
+            #     match = re.search("\d{4}", permit_class_name)
+            #     permit_name_unique_id = match.group()
+
+            #     permits.update({permit_name.strip():permit_name_unique_id})
+
     def tearDown(self):
         self.driver.close()
 
