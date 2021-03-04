@@ -39,12 +39,12 @@ class Driver():
         self.driver.get(self.IPARQ_ADMIN_URL)
 
         # get driver
-        browser = self.driver
+        self.browser = self.driver
 
         print("Please login to your iPARQ account through the browser that has launched. You have 1 minute to login.")
 
         # Wait Until the URL changes noting a successful login
-        WebDriverWait(browser, 60).until(EC.title_contains("iParq"))
+        WebDriverWait(self.browser, 60).until(EC.title_contains("iParq"))
 
     def set_main_portal_path(self, main_portal_path):
         self.MAIN_PORTAL_CSV = main_portal_path
@@ -258,6 +258,17 @@ class Driver():
             self.assertEqual(iPARQ_psid, permit_psid)
             self.assertEqual(iPARQ_price, permit_price)
 
+    # create permits for the main portal
+    def create_permits_main_portal(self):
+        # Navigate to the Permit Creation Page
+        self.browser.get(self.PERMIT_TYPES)
+
+        # Find the permit table
+        permit_table = WebDriverWait(self.browser, 5).until(lambda d: d.find_element(By.ID, 'st_setuppermittypes'))
+
+        # Grab all the permit elements in the table (in rows)
+        permit_elements = permit_table.find_elements(By.TAG_NAME, "tr")
+
     def tearDown(self):
         self.driver.close()
 
@@ -315,6 +326,9 @@ if __name__ == "__main__":
 
             # Set up our Selenium WebDriver
             driver.setUp()
+
+            # Create permits for the main portal
+            driver.create_permits_main_portal()
 
             # Tear Down once finished
             driver.tearDown()
