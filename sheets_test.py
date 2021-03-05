@@ -6,9 +6,23 @@ if __name__ == "__main__":
     ss = ezsheets.Spreadsheet(SPREADSHEET_ID)
     print("\n")
 
-    main_portal_fall_2021_2022 = ss[3]
+    # how we access sheets
+    main_portal_fall_2021_2022 = ss["Main Portal Fall (2021-2022)"]
 
-    print("get: " + main_portal_fall_2021_2022.get("A4"))
-    main_portal_fall_2021_2022['A4'] = "001"
-    print("get: " + main_portal_fall_2021_2022.get("A4"))
+    # how we write into columns
+    # main_portal_fall_2021_2022['A4'] = "001"
 
+    # how we read from columns
+    # print("get: " + main_portal_fall_2021_2022.get("F4"))
+
+    # how we read directly from columns
+    # prices = main_portal_fall_2021_2022.getColumn('F')
+    # for i, value in enumerate(prices):
+    #     if (value != ''):
+    #         print(value)
+
+    # how we read row by row (of those rows that aren't blank)
+    rows = main_portal_fall_2021_2022.getRows()
+    for i, row in enumerate(rows):
+        if (row[1] != ''):
+            print(row)
