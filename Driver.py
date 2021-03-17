@@ -259,7 +259,7 @@ class Driver():
             self.assertEqual(iPARQ_price, permit_price)
 
     # create permits for the main portal
-    def create_permits_main_portal(self):
+    def create_permits_main_portal(self, ss):
         # Navigate to the Permit Creation Page
         self.browser.get(self.PERMIT_TYPES)
 
@@ -269,6 +269,9 @@ class Driver():
         # Grab all the permit elements in the table (in rows)
         permit_elements = permit_table.find_elements(By.TAG_NAME, "tr")
 
+        # Define our permit name map
+        permits = {}
+
         # Build a map of each permit's unique id
         for permit_element in permit_elements:
             # Get the unique ID for the current permit
@@ -276,18 +279,111 @@ class Driver():
 
             # filter out only the active permits (non-deleted)
             if (('rollover' in permit_class_name) and ('st_deleted' not in permit_class_name)):
-                print(permit_class_name)
+                name_col = permit_element.find_elements(By.TAG_NAME, "td")[0]
+                name_span = name_col.find_elements(By.TAG_NAME, "span")[3]
+                name_input = name_span.find_element(By.NAME, "name")
+                permit_name = name_input.get_attribute('value')
 
-            #     name_col = permit_element.find_elements(By.TAG_NAME, "td")[0]
-            #     name_span = name_col.find_elements(By.TAG_NAME, "span")[3]
-            #     name_input = name_span.find_element(By.NAME, "name")
-            #     permit_name = name_input.get_attribute('value')
+                # find the unique permit ID 
+                match = re.search("\d{4}", permit_class_name)
+                permit_name_unique_id = match.group()
 
-            #     # find the unique permit ID 
-            #     match = re.search("\d{4}", permit_class_name)
-            #     permit_name_unique_id = match.group()
+                permits.update({permit_name.strip():permit_name_unique_id})
 
-            #     permits.update({permit_name.strip():permit_name_unique_id})
+        # Get the rows of the spreadsheet object
+        curr_sheet = ss["Sheet1"]
+        rows = curr_sheet.getRows()
+
+        # Define each column's index
+        permit_price_column = 5
+        permit_name_column = 7
+        permit_term_column = 8
+        permit_clone_column = 9
+
+        # Go through the rows and extract the information
+        # for i, row in enumerate(rows):
+        #     # skip the header entries 
+        #     if (row[1] != '' and i > 2):
+        #         current_permit_name = row[permit_name_column]
+        #         print("Permit name: " + current_permit_name)
+        #         print("Corresponding unique ID: " + permits.get(current_permit_name))
+
+        # Test a single row
+        current_row = rows[3]
+        current_permit_name = current_row[permit_name_column]
+        current_permit_term = current_row[permit_term_column]
+        current_permit_price = current_row[permit_price_column]
+        current_permit_clone_name = current_row[permit_clone_column]
+
+        print("\n##########")
+        print("Creating Permit for the following: " + current_permit_name + ", " + current_permit_term)
+        print("Price: " + current_permit_price)
+        print("Cloning: " + current_permit_clone_name)
+        print("##########\n")
+
+        # Navigate to the permit page of this row
+        self.browser.get(self.PERMIT_SESSIONS + "master_ID=" + permits.get(current_permit_name))
+
+        # Find the permit table
+        permit_table = WebDriverWait(self.browser, 5).until(lambda d: d.find_element(By.ID, 'st_setuppermitsessions'))
+
+        # Grab all the term elements in the table (in rows)
+        term_elements = permit_table.find_elements(By.TAG_NAME, "tr")
+
+        # Iterate through term elements and find the current session
+        for term_element in term_elements:
+            # Get the unique ID for the current permit
+            permit_class_name = term_element.get_attribute('class')
+
+            # filter out only the active permits (non-deleted)
+            if (('rollover' in permit_class_name) and ('st_deleted' not in permit_class_name)):
+                name_col = term_element.find_elements(By.TAG_NAME, "td")[0]
+                name_span = name_col.find_elements(By.TAG_NAME, "span")[2]
+                name_input = name_span.find_element(By.TAG_NAME, "b")
+
+                if (current_permit_clone_name == name_input.get_attribute("innerHTML")):
+                    break
+        
+        # find the unique term ID based off our match
+        match = re.search("\d{5}", permit_class_name)
+        permit_term_unique_id = match.group()
+
+        # click on the tab of the permit term
+        self.browser.get(self.PERMIT_SESSIONS + "session_ID=" + permit_term_unique_id)
+
+        # visit the link to clone the permit
+        self.browser.get(self.PERMIT_SESSIONS + "session_ID=" + permit_term_unique_id + "&clone=1")
+
+        # find the cloned permit databox
+        cloned_permit = WebDriverWait(self.browser, 5).until(lambda d: d.find_element(By.ID, 'databox'))
+
+        # Permit Sales Name
+        name_row = cloned_permit.find_elements(By.TAG_NAME, 'tr')[1]
+        name_element = name_row.find_elements(By.TAG_NAME, 'td')[1]
+        name_input_form = name_element.find_element_by_tag_name('input')
+        name_input_form.send_keys(current_permit_term)
+        alert = WebDriverWait(self.browser, 10).until(EC.alert_is_present())
+        self.browser.switch_to.alert.accept()
+
+        # Permit Design Group
+        design_group_row = cloned_permit.find_elements(By.TAG_NAME, 'tr')[2]
+        # make sure you accept the popup after out of name context. It only triggers once you leave context
+        alert = WebDriverWait(self.browser, 10).until(EC.alert_is_present())
+        self.browser.switch_to.alert.accept()
+        dropdown_parent = design_group_row.find_elements(By.TAG_NAME, 'td')[1]
+        dropdown_menu = dropdown_parent.find_element_by_tag_name('select')
+        # dropdown_menu.select(something here)
+        # alert = WebDriverWait(self.browser, 5).until(EC.alert_is_present())
+        # self.browser.switch_to.alert.accept()
+
+        # Permit Price
+        price_row = cloned_permit.find_elements(By.TAG_NAME, 'tr')[4]
+        price_element = price_row.find_elements(By.TAG_NAME, 'td')[1]
+        price_input_form = price_element.find_element_by_tag_name('input')
+        price_input_form.clear()
+        price_input_form.send_keys(current_permit_price)
+
+        time.sleep(10)
 
     def tearDown(self):
         self.driver.close()
@@ -344,11 +440,13 @@ if __name__ == "__main__":
         elif (userChoice == '2'):
             print("Loading Permit Creator...")
 
+            ss = ezsheets.Spreadsheet("1-ef8OVvVqXzUDfoFHTt7RQF4M_MLrswSnF4j9991yFo")
+
             # Set up our Selenium WebDriver
             driver.setUp()
 
             # Create permits for the main portal
-            driver.create_permits_main_portal()
+            driver.create_permits_main_portal(ss)
 
             # Tear Down once finished
             driver.tearDown()
