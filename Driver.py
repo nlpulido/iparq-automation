@@ -14,7 +14,12 @@ from selenium.webdriver.support.expected_conditions import element_to_be_clickab
 from selenium.webdriver.support import expected_conditions as EC
 from selenium.webdriver.common.by import By
 from selenium.webdriver.support.ui import WebDriverWait
+from selenium.webdriver.support.events import EventFiringWebDriver, AbstractEventListener
+from selenium.webdriver.common.keys import Keys
 
+class AlertListener(AbstractEventListener):
+    def after_change_value_of(self, element, driver):
+        driver.switch_to.alert.accept()
 
 class Driver():
 
@@ -291,14 +296,8 @@ class Driver():
                 permits.update({permit_name.strip():permit_name_unique_id})
 
         # Get the rows of the spreadsheet object
-        curr_sheet = ss["Sheet1"]
+        curr_sheet = ss["Main Portal Fall (2021-2022)"]
         rows = curr_sheet.getRows()
-
-        # Define each column's index
-        permit_price_column = 5
-        permit_name_column = 7
-        permit_term_column = 8
-        permit_clone_column = 9
 
         # Go through the rows and extract the information
         # for i, row in enumerate(rows):
@@ -310,15 +309,19 @@ class Driver():
 
         # Test a single row
         current_row = rows[3]
-        current_permit_name = current_row[permit_name_column]
-        current_permit_term = current_row[permit_term_column]
-        current_permit_price = current_row[permit_price_column]
-        current_permit_clone_name = current_row[permit_clone_column]
+        current_permit_name = current_row[7]
+        current_permit_term = current_row[8]
+        current_permit_price = current_row[5]
+        current_permit_clone_term = current_row[9]
+        current_permit_sales_start = current_row[10]
+        current_permit_sales_end = current_row[11]
+        current_permit_valid_start = current_row[12]
+        current_permit_valid_end = current_row[13]
 
         print("\n##########")
         print("Creating Permit for the following: " + current_permit_name + ", " + current_permit_term)
         print("Price: " + current_permit_price)
-        print("Cloning: " + current_permit_clone_name)
+        print("Cloning: " + current_permit_clone_term)
         print("##########\n")
 
         # Navigate to the permit page of this row
@@ -330,6 +333,9 @@ class Driver():
         # Grab all the term elements in the table (in rows)
         term_elements = permit_table.find_elements(By.TAG_NAME, "tr")
 
+        # create a map of each permit term and their unique id's
+        permit_terms = {}
+
         # Iterate through term elements and find the current session
         for term_element in term_elements:
             # Get the unique ID for the current permit
@@ -340,50 +346,76 @@ class Driver():
                 name_col = term_element.find_elements(By.TAG_NAME, "td")[0]
                 name_span = name_col.find_elements(By.TAG_NAME, "span")[2]
                 name_input = name_span.find_element(By.TAG_NAME, "b")
+                curr_permit_term_name = name_input.get_attribute("innerHTML")
 
-                if (current_permit_clone_name == name_input.get_attribute("innerHTML")):
-                    break
-        
-        # find the unique term ID based off our match
-        match = re.search("\d{5}", permit_class_name)
-        permit_term_unique_id = match.group()
+                # use regular expressions to grab the unique permit id
+                match = re.search("\d{5}", permit_class_name)
+                permit_term_unique_id = match.group()
 
-        # click on the tab of the permit term
-        self.browser.get(self.PERMIT_SESSIONS + "session_ID=" + permit_term_unique_id)
+                # put the corresponding unique id and permit class name in our map
+                permit_terms.update({curr_permit_term_name.strip():permit_term_unique_id})
 
-        # visit the link to clone the permit
-        self.browser.get(self.PERMIT_SESSIONS + "session_ID=" + permit_term_unique_id + "&clone=1")
+        if (current_permit_term not in permit_terms):
 
-        # find the cloned permit databox
-        cloned_permit = WebDriverWait(self.browser, 5).until(lambda d: d.find_element(By.ID, 'databox'))
+            # visit the link to clone the permit
+            self.browser.get(self.PERMIT_SESSIONS + "session_ID=" + permit_terms.get(current_permit_clone_term) + "&clone=1")
 
-        # Permit Sales Name
-        name_row = cloned_permit.find_elements(By.TAG_NAME, 'tr')[1]
-        name_element = name_row.find_elements(By.TAG_NAME, 'td')[1]
-        name_input_form = name_element.find_element_by_tag_name('input')
-        name_input_form.send_keys(current_permit_term)
-        alert = WebDriverWait(self.browser, 10).until(EC.alert_is_present())
-        self.browser.switch_to.alert.accept()
+            # find the cloned permit databox
+            cloned_permit = WebDriverWait(self.browser, 5).until(lambda d: d.find_element(By.ID, 'databox'))
 
-        # Permit Design Group
-        design_group_row = cloned_permit.find_elements(By.TAG_NAME, 'tr')[2]
-        # make sure you accept the popup after out of name context. It only triggers once you leave context
-        alert = WebDriverWait(self.browser, 10).until(EC.alert_is_present())
-        self.browser.switch_to.alert.accept()
-        dropdown_parent = design_group_row.find_elements(By.TAG_NAME, 'td')[1]
-        dropdown_menu = dropdown_parent.find_element_by_tag_name('select')
-        # dropdown_menu.select(something here)
-        # alert = WebDriverWait(self.browser, 5).until(EC.alert_is_present())
-        # self.browser.switch_to.alert.accept()
+            # Permit Sales Name
+            name_row = cloned_permit.find_elements(By.TAG_NAME, 'tr')[1]
+            name_element = name_row.find_elements(By.TAG_NAME, 'td')[1]
+            name_input_form = name_element.find_element_by_tag_name('input')
+            name_input_form.send_keys(current_permit_term)
+            name_input_form.send_keys(Keys.TAB)
+            name_alert = WebDriverWait(self.browser, 5).until(EC.alert_is_present())
+            self.browser.switch_to.alert.accept()
 
-        # Permit Price
-        price_row = cloned_permit.find_elements(By.TAG_NAME, 'tr')[4]
-        price_element = price_row.find_elements(By.TAG_NAME, 'td')[1]
-        price_input_form = price_element.find_element_by_tag_name('input')
-        price_input_form.clear()
-        price_input_form.send_keys(current_permit_price)
+            # Permit Design Group
+            design_group_row = cloned_permit.find_elements(By.TAG_NAME, 'tr')[2]
+            dropdown_parent = design_group_row.find_elements(By.TAG_NAME, 'td')[1]
+            dropdown_menu = dropdown_parent.find_element_by_tag_name('select')
+            # dropdown_menu.select(something here)
+            # alert = WebDriverWait(self.browser, 5).until(EC.alert_is_present())
+            # self.browser.switch_to.alert.accept()
 
-        time.sleep(10)
+            # Permit Price
+            price_row = cloned_permit.find_elements(By.TAG_NAME, 'tr')[4]
+            price_element = price_row.find_elements(By.TAG_NAME, 'td')[1]
+            price_input_form = price_element.find_element_by_tag_name('input')
+            price_input_form.clear()
+            price_input_form.send_keys(current_permit_price)
+
+            # Permit Sales Start Date
+            sales_start_date_row = cloned_permit.find_elements(By.TAG_NAME, 'tr')[7]
+            sales_start_date_element = sales_start_date_row.find_elements(By.TAG_NAME, 'td')[1]
+            sales_start_date_input_form = sales_start_date_element.find_element_by_tag_name('input')
+            sales_start_date_input_form.clear()
+            sales_start_date_input_form.send_keys(current_permit_sales_start)
+
+            # Permit Sales End Date
+            sales_end_date_row = cloned_permit.find_elements(By.TAG_NAME, 'tr')[8]
+            sales_end_date_element = sales_end_date_row.find_elements(By.TAG_NAME, 'td')[1]
+            sales_end_date_input_form = sales_end_date_element.find_element_by_tag_name('input')
+            sales_end_date_input_form.clear()
+            sales_end_date_input_form.send_keys(current_permit_sales_end)
+
+            # Permit Valid Start Date
+            valid_start_date_row = cloned_permit.find_elements(By.TAG_NAME, 'tr')[12]
+            valid_start_date_element = valid_start_date_row.find_elements(By.TAG_NAME, 'td')[1]
+            valid_start_date_input_form = valid_start_date_element.find_element_by_tag_name('input')
+            valid_start_date_input_form.clear()
+            valid_start_date_input_form.send_keys(current_permit_valid_start)
+
+            # Permit Valid End Date
+            valid_end_date_row = cloned_permit.find_elements(By.TAG_NAME, 'tr')[13]
+            valid_end_date_element = valid_end_date_row.find_elements(By.TAG_NAME, 'td')[1]
+            valid_end_date_input_form = valid_end_date_element.find_element_by_tag_name('input')
+            valid_end_date_input_form.clear()
+            valid_end_date_input_form.send_keys(current_permit_valid_end)
+
+            time.sleep(3)
 
     def tearDown(self):
         self.driver.close()
@@ -440,7 +472,7 @@ if __name__ == "__main__":
         elif (userChoice == '2'):
             print("Loading Permit Creator...")
 
-            ss = ezsheets.Spreadsheet("1-ef8OVvVqXzUDfoFHTt7RQF4M_MLrswSnF4j9991yFo")
+            ss = ezsheets.Spreadsheet("1WOto59_8sdDg1_4Zd52UAteDmusdW1F5WdtBbGhpouk")
 
             # Set up our Selenium WebDriver
             driver.setUp()
