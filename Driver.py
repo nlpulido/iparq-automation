@@ -299,7 +299,7 @@ class Driver():
         curr_sheet = ss["Main Portal Fall (2021-2022)"]
         rows = curr_sheet.getRows()
 
-        # Go through the rows and extract the information
+        # Go through the rows and extract the information (THIS IS IF WE WANTED TO DO IT FOR EVERY PERMIT)
         # for i, row in enumerate(rows):
         #     # skip the header entries 
         #     if (row[1] != '' and i > 2):
@@ -317,6 +317,7 @@ class Driver():
         current_permit_sales_end = current_row[11]
         current_permit_valid_start = current_row[12]
         current_permit_valid_end = current_row[13]
+        current_permit_psid = current_row[0]
 
         print("\n##########")
         print("Creating Permit for the following: " + current_permit_name + ", " + current_permit_term)
@@ -414,6 +415,22 @@ class Driver():
             valid_end_date_input_form = valid_end_date_element.find_element_by_tag_name('input')
             valid_end_date_input_form.clear()
             valid_end_date_input_form.send_keys(current_permit_valid_end)
+
+            # Add Session Buttons
+            add_session_btn = cloned_permit.find_element(By.XPATH, '//*[@id="ps_submit"]/table/tbody/tr[44]/td[2]/span/a')
+            add_session_btn.click()
+
+            # Wait till the Permit PSID appears
+            permit_psid = WebDriverWait(self.browser, 10).until(lambda d: d.find_element(By.XPATH, '//*[@id="databox"]/table/tbody/tr[1]/td/span/b')).innerHTML
+
+            # use regular expressions to grab the unique permit id
+            permit_psid_match = re.search("\d{5}", permit_psid)
+            permit_term_unique_psid = permit_psid_match.group()
+
+            # write the permit PSID to the google sheet
+            current_permit_psid = permit_term_unique_psid
+            print("permit_term_unique_psid: " + permit_term_unique_psid)
+            print("current_permit_psid: " + current_permit_psid)
 
             time.sleep(3)
 
