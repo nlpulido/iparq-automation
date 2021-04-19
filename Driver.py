@@ -21,7 +21,7 @@ class AlertListener(AbstractEventListener):
     def after_change_value_of(self, element, driver):
         driver.switch_to.alert.accept()
 
-class Driver():
+class Driver(unittest.TestCase):
 
     # Set up our Selenium Web Driver before we start any automation process
     def setUp(self):
@@ -58,13 +58,11 @@ class Driver():
         self.AFFILIATE_PORTAL_CSV = affiliate_portal_path
 
     # test case: test all the permits in the main portal
-    def test_map_main_portal(self):
+    def test_map_main_portal(self, ss):
 
         print('### CHECKING MAIN PORTAL ###')
 
         ########## 1. LOGIN ##########
-        # Load Dataframe of main portal information
-        self.df = pd.read_csv(self.MAIN_PORTAL_CSV)
 
         # get driver
         browser = self.driver
@@ -99,74 +97,76 @@ class Driver():
 
                 permits.update({permit_name.strip():permit_name_unique_id})
 
+        # Get the rows of the spreadsheet object
+        curr_sheet = ss["Fall (2021-2022)"]
+        rows = curr_sheet.getRows()
+
         ########## 2. LOAD IN CSV FILE FOR COMPARISONS & ITERATE THROUGH EACH PERMIT ##########
-        for index, row in self.df.iterrows():
-            
-            # Initialize the Columns
-            permit_name = str(row['PERMIT NAME'])
-            permit_term = str(row['PERMIT TERM'])
-            permit_psid = str(row['PSID'])
-            permit_price = str(int(row['PERMIT AMOUNT']))
-            permit_class_name = None
-            permit_name_unique_id = permits[permit_name]
-            permit_term_unique_id = None
+        for i, row in enumerate(rows):
 
-            print("\n----- Checking Permit: " + permit_name + " -----")
+            # Grab values from the Google Sheet
+            permit_psid = row[0]
+            permit_price = row[5]
+            permit_name = row[7]
+            permit_term = row[8]
 
-            # visit the permit sessions for our current permit
-            browser.get(self.PERMIT_SESSIONS + "master_ID=" + permit_name_unique_id)
+            if ((permit_name != '') and (i > 2)):
+                # Grab the unique ID from our local hashtable
+                permit_class_name = None
+                permit_name_unique_id = permits[permit_name]
+                permit_term_unique_id = None
 
-            # Find the permit table
-            permit_table = WebDriverWait(browser, 5).until(lambda d: d.find_element(By.ID, 'st_setuppermitsessions'))
+                # visit the permit sessions for our current permit
+                browser.get(self.PERMIT_SESSIONS + "master_ID=" + permit_name_unique_id)
 
-            # Grab all the term elements in the table (in rows)
-            term_elements = permit_table.find_elements(By.TAG_NAME, "tr")
+                # Find the permit table
+                permit_table = WebDriverWait(browser, 5).until(lambda d: d.find_element(By.ID, 'st_setuppermitsessions'))
 
-            print("Current Session: " + permit_name + " " + permit_term)
+                # Grab all the term elements in the table (in rows)
+                term_elements = permit_table.find_elements(By.TAG_NAME, "tr")
 
-            # Iterate through term elements and find the current session
-            for term_element in term_elements:
-                # Get the unique ID for the current permit
-                permit_class_name = term_element.get_attribute('class')
+                print("Current Session(" + permit_psid +") : " + permit_name + " " + permit_term)
 
-                # filter out only the active permits (non-deleted)
-                if (('rollover' in permit_class_name) and ('st_deleted' not in permit_class_name)):
-                    name_col = term_element.find_elements(By.TAG_NAME, "td")[0]
-                    name_span = name_col.find_elements(By.TAG_NAME, "span")[2]
-                    name_input = name_span.find_element(By.TAG_NAME, "b")
+                # Iterate through term elements and find the current session
+                for term_element in term_elements:
+                    # Get the unique ID for the current permit
+                    permit_class_name = term_element.get_attribute('class')
 
-                    if (permit_term == name_input.get_attribute("innerHTML")):
-                        break
-            
-            # find the unique term ID based off our match
-            match = re.search("\d{5}", permit_class_name)
-            permit_term_unique_id = match.group()
+                    # filter out only the active permits (non-deleted)
+                    if (('rollover' in permit_class_name) and ('st_deleted' not in permit_class_name)):
+                        name_col = term_element.find_elements(By.TAG_NAME, "td")[0]
+                        name_span = name_col.find_elements(By.TAG_NAME, "span")[2]
+                        name_input = name_span.find_element(By.TAG_NAME, "b")
 
-            # visit the permit sessions
-            browser.get(self.PERMIT_SESSIONS + "session_ID=" + permit_term_unique_id)
+                        if (permit_term == name_input.get_attribute("innerHTML")):
+                            break
+                
+                # find the unique term ID based off our match
+                match = re.search("\d{5}", permit_class_name)
+                permit_term_unique_id = match.group()
 
-            # Find the PSID data in the databox
-            current_permit = WebDriverWait(browser, 5).until(lambda d: d.find_element(By.ID, 'databox'))
-            psid_span = current_permit.find_element(By.TAG_NAME, "span").find_element(By.TAG_NAME, "b").get_attribute("innerHTML")
-            iPARQ_psid = re.search("\d{5}", psid_span).group()
+                # visit the permit sessions
+                browser.get(self.PERMIT_SESSIONS + "session_ID=" + permit_term_unique_id)
 
-            # Find the permit price in the data box
-            price_row = current_permit.find_elements(By.TAG_NAME, 'tr')[5]
-            price_element = price_row.find_elements(By.TAG_NAME, 'td')[1].get_attribute('innerHTML')
-            iPARQ_price = re.search("\d+", price_element).group()
+                # Find the PSID data in the databox
+                current_permit = WebDriverWait(browser, 5).until(lambda d: d.find_element(By.ID, 'databox'))
+                psid_span = current_permit.find_element(By.TAG_NAME, "span").find_element(By.TAG_NAME, "b").get_attribute("innerHTML")
+                iPARQ_psid = re.search("\d{5}", psid_span).group()
 
-            self.assertEqual(iPARQ_psid, permit_psid)
-            self.assertEqual(iPARQ_price, permit_price)
+                # Find the permit price in the data box
+                price_row = current_permit.find_elements(By.TAG_NAME, 'tr')[5]
+                price_element = price_row.find_elements(By.TAG_NAME, 'td')[1].get_attribute('innerHTML')
+                iPARQ_price = re.search("\d+", price_element).group()
+
+                self.assertEqual(iPARQ_psid, permit_psid)
+                self.assertEqual(iPARQ_price, permit_price)
 
     # test case: test all the permits in the affiliate portal
-    def test_map_affiliate_portal(self):
+    def test_map_affiliate_portal(self, ss):
 
         print('### CHECKING AFFILIATE PORTAL ###')
 
         ########## 1. LOGIN ##########
-
-        # Load Dataframe of permit information
-        self.df = pd.read_csv(self.AFFILIATE_PORTAL_CSV)
 
         # get driver
         browser = self.driver
@@ -204,64 +204,69 @@ class Driver():
 
                 permits.update({permit_name.strip():permit_name_unique_id})
 
+        # Get the rows of the spreadsheet object
+        curr_sheet = ss["Affiliate Fall (2021-2022)"]
+        rows = curr_sheet.getRows()
+
         ########## 2. LOAD IN CSV FILE FOR COMPARISONS & ITERATE THROUGH EACH PERMIT ##########
-        for index, row in self.df.iterrows():
-            
-            # Initialize the Columns
-            permit_name = str(row['PERMIT NAME'])
-            permit_term = str(row['PERMIT TERM'])
-            permit_psid = str(row['PSID'])
-            permit_price = str(int(row['PERMIT AMOUNT']))
-            permit_class_name = None
-            permit_name_unique_id = permits[permit_name]
-            permit_term_unique_id = None
+        for i, row in enumerate(rows):
 
-            print("\n----- Checking Permit: " + permit_name + " -----")
+            # Grab values from the Google Sheet
+            permit_psid = row[0]
+            permit_price = row[5]
+            permit_name = row[7]
+            permit_term = row[8]
 
-            # visit the permit sessions for our current permit
-            browser.get(self.PERMIT_SESSIONS + "master_ID=" + permit_name_unique_id)
+            if ((permit_name != '') and (i > 2)):
+                # Grab the unique ID from our local hashtable
+                permit_class_name = None
+                permit_name_unique_id = permits[permit_name]
+                permit_term_unique_id = None
 
-            # Find the permit table
-            permit_table = WebDriverWait(browser, 5).until(lambda d: d.find_element(By.ID, 'st_setuppermitsessions'))
+                # visit the permit sessions for our current permit
+                browser.get(self.PERMIT_SESSIONS + "master_ID=" + permit_name_unique_id)
 
-            # Grab all the term elements in the table (in rows)
-            term_elements = permit_table.find_elements(By.TAG_NAME, "tr")
+                # Find the permit table
+                permit_table = WebDriverWait(browser, 5).until(lambda d: d.find_element(By.ID, 'st_setuppermitsessions'))
 
-            print("Current Session: " + permit_name + " " + permit_term)
+                # Grab all the term elements in the table (in rows)
+                term_elements = permit_table.find_elements(By.TAG_NAME, "tr")
 
-            # Iterate through term elements and find the current session
-            for term_element in term_elements:
-                # Get the unique ID for the current permit
-                permit_class_name = term_element.get_attribute('class')
+                print("Current Session(" + permit_psid +") : " + permit_name + " " + permit_term)
 
-                # filter out only the active permits (non-deleted)
-                if (('rollover' in permit_class_name) and ('st_deleted' not in permit_class_name)):
-                    name_col = term_element.find_elements(By.TAG_NAME, "td")[0]
-                    name_span = name_col.find_elements(By.TAG_NAME, "span")[2]
-                    name_input = name_span.find_element(By.TAG_NAME, "b")
+                # Iterate through term elements and find the current session
+                for term_element in term_elements:
+                    # Get the unique ID for the current permit
+                    permit_class_name = term_element.get_attribute('class')
 
-                    if (permit_term == name_input.get_attribute("innerHTML")):
-                        break
-            
-            # find the unique term ID based off our match
-            match = re.search("\d{5}", permit_class_name)
-            permit_term_unique_id = match.group()
+                    # filter out only the active permits (non-deleted)
+                    if (('rollover' in permit_class_name) and ('st_deleted' not in permit_class_name)):
+                        name_col = term_element.find_elements(By.TAG_NAME, "td")[0]
+                        name_span = name_col.find_elements(By.TAG_NAME, "span")[2]
+                        name_input = name_span.find_element(By.TAG_NAME, "b")
 
-            # visit the permit sessions
-            browser.get(self.PERMIT_SESSIONS + "session_ID=" + permit_term_unique_id)
+                        if (permit_term == name_input.get_attribute("innerHTML")):
+                            break
+                
+                # find the unique term ID based off our match
+                match = re.search("\d{5}", permit_class_name)
+                permit_term_unique_id = match.group()
 
-            # Find the PSID data in the databox
-            current_permit = WebDriverWait(browser, 5).until(lambda d: d.find_element(By.ID, 'databox'))
-            psid_span = current_permit.find_element(By.TAG_NAME, "span").find_element(By.TAG_NAME, "b").get_attribute("innerHTML")
-            iPARQ_psid = re.search("\d{5}", psid_span).group()
+                # visit the permit sessions
+                browser.get(self.PERMIT_SESSIONS + "session_ID=" + permit_term_unique_id)
 
-            # Find the permit price in the data box
-            price_row = current_permit.find_elements(By.TAG_NAME, 'tr')[5]
-            price_element = price_row.find_elements(By.TAG_NAME, 'td')[1].get_attribute('innerHTML')
-            iPARQ_price = re.search("\d+", price_element).group()
+                # Find the PSID data in the databox
+                current_permit = WebDriverWait(browser, 5).until(lambda d: d.find_element(By.ID, 'databox'))
+                psid_span = current_permit.find_element(By.TAG_NAME, "span").find_element(By.TAG_NAME, "b").get_attribute("innerHTML")
+                iPARQ_psid = re.search("\d{5}", psid_span).group()
 
-            self.assertEqual(iPARQ_psid, permit_psid)
-            self.assertEqual(iPARQ_price, permit_price)
+                # Find the permit price in the data box
+                price_row = current_permit.find_elements(By.TAG_NAME, 'tr')[5]
+                price_element = price_row.find_elements(By.TAG_NAME, 'td')[1].get_attribute('innerHTML')
+                iPARQ_price = re.search("\d+", price_element).group()
+
+                self.assertEqual(iPARQ_psid, permit_psid)
+                self.assertEqual(iPARQ_price, permit_price)
 
     # create permits for the main portal
     def create_permits_main_portal(self, ss):
@@ -454,31 +459,28 @@ if __name__ == "__main__":
 
         if (userChoice == "1"):
             print("Loading New Permit Verify Test...")
-            main_portal_path = None
-            affiliate_portal_path = None
+            print("Please make sure that the iPARQ Permit Creation Template is the Google Sheet that you used.")
 
             # Set up our Selenium WebDriver
             driver.setUp()
 
+            main_portal_path = False
+            affiliate_portal_path = False
+
             # Poll input
             test_main_portal = input("\nWould you like to test the Main Portal? (Y/N)\n")
             if (test_main_portal == "Y"):
-                main_portal_path = filedialog.askopenfilename()
-                driver.set_main_portal_path(main_portal_path)
-
+                main_portal_path = True
+                ss = ezsheets.Spreadsheet("1WOto59_8sdDg1_4Zd52UAteDmusdW1F5WdtBbGhpouk")
                 print("Testing Main Portal!")
-
-                driver.test_map_main_portal()
+                driver.test_map_main_portal(ss)
 
             test_affiliate_portal = input("\nWould you like to test the Affiliate Portal? (Y/N)\n")
             if (test_affiliate_portal == "Y"):
-
-                affiliate_portal_path = filedialog.askopenfilename()
-                driver.set_affiliate_portal_path(affiliate_portal_path)
-
+                affiliate_portal_path = True
+                ss = ezsheets.Spreadsheet("1WOto59_8sdDg1_4Zd52UAteDmusdW1F5WdtBbGhpouk")
                 print("Testing Affiliate Portal!")
-
-                driver.test_map_affiliate_portal()
+                driver.test_map_affiliate_portal(ss)
 
             if (main_portal_path == None and affiliate_portal_path == None):
                 print("\nIn order to run the tests, either a Main Portal CSV File or a Affiliate Portal CSV File must be inputted. Please try again.\n")
@@ -488,17 +490,18 @@ if __name__ == "__main__":
             break
         elif (userChoice == '2'):
             print("Loading Permit Creator...")
+            print("Sorry, that functionality has been taken out!")
 
-            ss = ezsheets.Spreadsheet("1WOto59_8sdDg1_4Zd52UAteDmusdW1F5WdtBbGhpouk")
+            # ss = ezsheets.Spreadsheet("1WOto59_8sdDg1_4Zd52UAteDmusdW1F5WdtBbGhpouk")
 
-            # Set up our Selenium WebDriver
-            driver.setUp()
+            # # Set up our Selenium WebDriver
+            # driver.setUp()
 
-            # Create permits for the main portal
-            driver.create_permits_main_portal(ss)
+            # # Create permits for the main portal
+            # driver.create_permits_main_portal(ss)
 
-            # Tear Down once finished
-            driver.tearDown()
+            # # Tear Down once finished
+            # driver.tearDown()
 
             break
         elif (userChoice == '3'):
