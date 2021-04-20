@@ -1,12 +1,8 @@
 import os
-import time
 import unittest
 import logging
 import re
-import pandas as pd
-import tkinter
 import ezsheets
-from tkinter import filedialog
 from selenium import webdriver
 from webdriver_manager.chrome import ChromeDriverManager
 from selenium.webdriver.support.ui import Select
