@@ -7,11 +7,17 @@ You've finished making the new permits for the upcoming year & want to verify th
 ## Step #1. Set Up / Installation
 1. Download & Install the following:
     - [Python (latest version)](https://www.python.org/downloads/)
-    - [Selenium (for Python)](https://www.selenium.dev/downloads/)
+
+    1a. Make sure you "Add Python to PATH" when/if prompted during Python setup.
+
 
 2. Open Command Prompt (windows) or terminal (mac) as administrator.
-    - Enter the following into the window: `pip install webdriver-manager`
-    - if the command above doesn't work try: `pip3 install webdriver-manager`
+    - a. Enter the following into the window: `pip install webdriver-manager`
+        - if the command above doesn't work try: `pip3 install webdriver-manager`
+    - b. Enter the following into the window: `pip install -U selenium`
+        - if the command above doesn't work try: `pip3 install -U selenium`
+    - c. Enter the following into the window: `pip install ezsheets`
+        - if the command above doesn't work try: `pip3 install ezsheets`
 
 ## Step #2. Usage
 1. Open a Command Prompt (windows) or terminal (mac) with the unzipped folder:
