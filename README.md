@@ -7,6 +7,9 @@ You've finished making the new permits for the upcoming year & want to verify th
 ## Step #1. Set Up / Installation
 1. Download & Install the following:
     - [Python (latest version)](https://www.python.org/downloads/)
+    - Webdriver Manager
+    - Selenium
+    - EZSheets
 
     1a. Make sure you "Add Python to PATH" when/if prompted during Python setup.
 
@@ -26,6 +29,10 @@ You've finished making the new permits for the upcoming year & want to verify th
 2. After opening it, run the following command:
     - `python Driver.py`
     - if the command above doesn't work, use `python3 Driver.py`
+
+    2a. EZSheets will prompt you to sign in with Google to get access to the Google Sheet. Allow access & it will generate a unique API token for you.
+    
+    2b. The script works off this [Google Sheet](https://docs.google.com/spreadsheets/d/1WOto59_8sdDg1_4Zd52UAteDmusdW1F5WdtBbGhpouk/edit#gid=554750331) so please make sure that it's information is up to date.
 
 3. After the window opens, go ahead and log in.
 

@@ -54,7 +54,7 @@ class Driver(unittest.TestCase):
         self.AFFILIATE_PORTAL_CSV = affiliate_portal_path
 
     # test case: test all the permits in the main portal
-    def test_map_main_portal(self, ss):
+    def test_map_main_portal(self, ss, term):
 
         print('### CHECKING MAIN PORTAL ###')
 
@@ -94,7 +94,7 @@ class Driver(unittest.TestCase):
                 permits.update({permit_name.strip():permit_name_unique_id})
 
         # Get the rows of the spreadsheet object
-        curr_sheet = ss["Fall (2021-2022)"]
+        curr_sheet = ss[term]
         rows = curr_sheet.getRows()
 
         ########## 2. LOAD IN CSV FILE FOR COMPARISONS & ITERATE THROUGH EACH PERMIT ##########
@@ -158,7 +158,7 @@ class Driver(unittest.TestCase):
                 self.assertEqual(iPARQ_price, permit_price)
 
     # test case: test all the permits in the affiliate portal
-    def test_map_affiliate_portal(self, ss):
+    def test_map_affiliate_portal(self, ss, term):
 
         print('### CHECKING AFFILIATE PORTAL ###')
 
@@ -201,7 +201,7 @@ class Driver(unittest.TestCase):
                 permits.update({permit_name.strip():permit_name_unique_id})
 
         # Get the rows of the spreadsheet object
-        curr_sheet = ss["Affiliate Fall (2021-2022)"]
+        curr_sheet = ss[term]
         rows = curr_sheet.getRows()
 
         ########## 2. LOAD IN CSV FILE FOR COMPARISONS & ITERATE THROUGH EACH PERMIT ##########
@@ -462,21 +462,24 @@ if __name__ == "__main__":
 
             main_portal_path = False
             affiliate_portal_path = False
+            term = ""
 
             # Poll input
+            term = input("\nPlease enter the exact name of the portal you'd like to verify. (For example: Fall (2021-2022)) \n")
+
             test_main_portal = input("\nWould you like to test the Main Portal? (Y/N)\n")
             if (test_main_portal == "Y"):
                 main_portal_path = True
                 ss = ezsheets.Spreadsheet("1WOto59_8sdDg1_4Zd52UAteDmusdW1F5WdtBbGhpouk")
                 print("Testing Main Portal!")
-                driver.test_map_main_portal(ss)
+                driver.test_map_main_portal(ss, term)
 
             test_affiliate_portal = input("\nWould you like to test the Affiliate Portal? (Y/N)\n")
             if (test_affiliate_portal == "Y"):
                 affiliate_portal_path = True
                 ss = ezsheets.Spreadsheet("1WOto59_8sdDg1_4Zd52UAteDmusdW1F5WdtBbGhpouk")
                 print("Testing Affiliate Portal!")
-                driver.test_map_affiliate_portal(ss)
+                driver.test_map_affiliate_portal(ss, term)
 
             if (main_portal_path == None and affiliate_portal_path == None):
                 print("\nIn order to run the tests, either a Main Portal CSV File or a Affiliate Portal CSV File must be inputted. Please try again.\n")
